@@ -10,10 +10,13 @@ import { DatabaseSelector } from '@/components/DatabaseSelector';
 import { SchemaEditor } from '@/components/SchemaEditor';
 import { DevEnvSelector } from '@/components/DevEnvSelector';
 import { ExportPanel } from '@/components/ExportPanel';
-import { Zap } from 'lucide-react';
+import { Zap, AlertCircle, X } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 export default function Home() {
   const currentStep = useAppStore((state) => state.currentStep);
+  const error = useAppStore((state) => state.error);
+  const setError = useAppStore((state) => state.setError);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -55,6 +58,23 @@ export default function Home() {
       </header>
 
       <StepIndicator />
+
+      {error && (
+        <Card className="mt-4 border-red-500/50 bg-red-950/20 backdrop-blur-sm">
+          <div className="flex items-start gap-3 p-4">
+            <AlertCircle className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm text-red-200">{error}</p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-400 hover:text-red-300 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </Card>
+      )}
 
       <div className="mt-8">
         {renderStep()}

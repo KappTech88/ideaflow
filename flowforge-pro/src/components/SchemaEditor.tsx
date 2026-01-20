@@ -7,29 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/store/useAppStore';
 import { ArrowRight, ArrowLeft, Database, Plus, Trash2, Code, Sparkles } from 'lucide-react';
+import { generateSQL } from '@/lib/schema-utils';
 import type { SchemaTable, SchemaColumn } from '@/types';
 
-function generateSQL(tables: SchemaTable[], dbType: string): string {
-  return tables.map((table) => {
-    const columns = table.columns.map((col) => {
-      let type = col.type;
-      if (dbType === 'mysql') {
-        if (type === 'SERIAL') type = 'INT AUTO_INCREMENT';
-        if (type === 'TEXT') type = 'TEXT';
-      } else if (dbType === 'sqlite') {
-        if (type === 'SERIAL') type = 'INTEGER';
-        if (type === 'VARCHAR(255)') type = 'TEXT';
-      }
-      const constraints = col.constraints.join(' ');
-      return `  ${col.name} ${type}${constraints ? ' ' + constraints : ''}`;
-    }).join(',\n');
-
-    return `CREATE TABLE ${table.name} (\n${columns}\n);`;
-  }).join('\n\n');
-}
-
 export function SchemaEditor() {
-  const { schemaData, setSchemaData, nextStep, prevStep, databaseType, optimizedData, workflowData, projectType, setLoading } = useAppStore();
+  const { schemaData, setSchemaData, nextStep, prevStep, databaseType, optimizedData, workflowData, projectType, setLoading, setError } = useAppStore();
   const [tables, setTables] = useState<SchemaTable[]>(schemaData?.tables || []);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSQL, setShowSQL] = useState(false);
@@ -38,11 +20,13 @@ export function SchemaEditor() {
     if (!schemaData && optimizedData && workflowData && databaseType) {
       generateSchema();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const generateSchema = async () => {
     setIsGenerating(true);
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch('/api/ai/schema', {
@@ -51,13 +35,18 @@ export function SchemaEditor() {
         body: JSON.stringify({ optimizedData, workflowData, projectType, databaseType }),
       });
 
-      if (!response.ok) throw new Error('Failed to generate schema');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate schema');
+      }
 
       const data = await response.json();
       setTables(data.tables);
       setSchemaData(data);
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to generate schema';
       console.error('Error generating schema:', error);
+      setError(message);
     } finally {
       setIsGenerating(false);
       setLoading(false);

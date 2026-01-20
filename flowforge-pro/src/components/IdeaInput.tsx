@@ -18,7 +18,7 @@ const exampleIdeas = [
 ];
 
 export function IdeaInput() {
-  const { originalIdea, setOriginalIdea, nextStep, prevStep, projectType, setLoading, setOptimizedData } = useAppStore();
+  const { originalIdea, setOriginalIdea, nextStep, prevStep, projectType, setLoading, setOptimizedData, setError } = useAppStore();
   const [isOptimizing, setIsOptimizing] = useState(false);
 
   const handleExampleClick = (idea: string) => {
@@ -30,6 +30,7 @@ export function IdeaInput() {
 
     setIsOptimizing(true);
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch('/api/ai/optimize', {
@@ -38,13 +39,18 @@ export function IdeaInput() {
         body: JSON.stringify({ idea: originalIdea, projectType }),
       });
 
-      if (!response.ok) throw new Error('Failed to optimize idea');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to optimize idea');
+      }
 
       const data = await response.json();
       setOptimizedData(data);
       nextStep();
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to optimize idea';
       console.error('Error optimizing idea:', error);
+      setError(message);
     } finally {
       setIsOptimizing(false);
       setLoading(false);

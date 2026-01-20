@@ -48,7 +48,22 @@ Return ONLY valid JSON, no markdown or explanation.`,
       throw new Error('Unexpected response type');
     }
 
-    const optimizedData = JSON.parse(content.text);
+    // Validate and parse JSON response
+    let optimizedData;
+    try {
+      optimizedData = JSON.parse(content.text);
+      // Validate required fields
+      if (!optimizedData.appName || !optimizedData.tagline || !optimizedData.description || !Array.isArray(optimizedData.features)) {
+        throw new Error('Invalid response structure');
+      }
+    } catch (parseError) {
+      console.error('Error parsing AI response:', parseError);
+      return NextResponse.json(
+        { error: 'Failed to parse AI response' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(optimizedData);
   } catch (error) {
     console.error('Error optimizing idea:', error);
