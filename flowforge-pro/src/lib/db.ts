@@ -132,3 +132,8 @@ export function updateProject(id: string, updates: Partial<{
   const stmt = db.prepare(`UPDATE projects SET ${fields.join(', ')} WHERE id = ?`);
   stmt.run(...values, id);
 }
+
+export function deleteProject(id: string): void {
+  const stmt = db.prepare('DELETE FROM projects WHERE id = ?');
+  stmt.run(id);
+}

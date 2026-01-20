@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getProjects, createProject } from '@/lib/db';
+import { getProjects, createProject, deleteProject } from '@/lib/db';
 
 export async function GET() {
   try {
@@ -60,6 +60,30 @@ export async function POST(request: Request) {
     console.error('Error creating project:', error);
     return NextResponse.json(
       { error: 'Failed to create project' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Project ID is required' },
+        { status: 400 }
+      );
+    }
+
+    deleteProject(id);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete project' },
       { status: 500 }
     );
   }
