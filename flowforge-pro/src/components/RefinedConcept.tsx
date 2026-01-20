@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/store/useAppStore';
-import { ArrowRight, ArrowLeft, Sparkles, CheckCircle, Edit3 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Sparkles, CheckCircle } from 'lucide-react';
 
 export function RefinedConcept() {
-  const { optimizedData, nextStep, prevStep, setLoading, setWorkflowData, projectType } = useAppStore();
+  const { optimizedData, nextStep, prevStep, setLoading, setWorkflowData, projectType, setError } = useAppStore();
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleContinue = async () => {
@@ -16,6 +16,7 @@ export function RefinedConcept() {
 
     setIsGenerating(true);
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch('/api/ai/workflow', {
@@ -24,13 +25,18 @@ export function RefinedConcept() {
         body: JSON.stringify({ optimizedData, projectType }),
       });
 
-      if (!response.ok) throw new Error('Failed to generate workflow');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate workflow');
+      }
 
       const data = await response.json();
       setWorkflowData(data);
       nextStep();
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to generate workflow';
       console.error('Error generating workflow:', error);
+      setError(message);
     } finally {
       setIsGenerating(false);
       setLoading(false);

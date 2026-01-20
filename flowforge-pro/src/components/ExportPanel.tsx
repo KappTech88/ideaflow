@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/store/useAppStore';
 import { ArrowLeft, Download, FileText, Code, Database, Workflow, CheckCircle, Save } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { generateSQL } from '@/lib/schema-utils';
 
 function generateMarkdown(state: ReturnType<typeof useAppStore.getState>): string {
   const { optimizedData, workflowData, schemaData, databaseType, devEnvironment, projectType, originalIdea } = state;
@@ -121,28 +122,6 @@ function generateComfyUIWorkflow(state: ReturnType<typeof useAppStore.getState>)
   };
 }
 
-function generateSQL(state: ReturnType<typeof useAppStore.getState>): string {
-  const { schemaData, databaseType } = state;
-
-  if (!schemaData?.tables) return '';
-
-  return schemaData.tables.map((table) => {
-    const columns = table.columns.map((col) => {
-      let type = col.type;
-      if (databaseType === 'mysql') {
-        if (type === 'SERIAL') type = 'INT AUTO_INCREMENT';
-      } else if (databaseType === 'sqlite') {
-        if (type === 'SERIAL') type = 'INTEGER';
-        if (type === 'VARCHAR(255)') type = 'TEXT';
-      }
-      const constraints = col.constraints.join(' ');
-      return `  ${col.name} ${type}${constraints ? ' ' + constraints : ''}`;
-    }).join(',\n');
-
-    return `CREATE TABLE ${table.name} (\n${columns}\n);`;
-  }).join('\n\n');
-}
-
 function downloadFile(content: string, filename: string, type: string) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
@@ -157,7 +136,7 @@ function downloadFile(content: string, filename: string, type: string) {
 
 export function ExportPanel() {
   const state = useAppStore();
-  const { prevStep, optimizedData, reset } = state;
+  const { prevStep, optimizedData, schemaData, databaseType, reset, setError } = state;
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -177,12 +156,15 @@ export function ExportPanel() {
   };
 
   const handleDownloadSQL = () => {
-    const content = generateSQL(state);
+    const content = schemaData?.tables && databaseType 
+      ? generateSQL(schemaData.tables, databaseType) 
+      : '';
     downloadFile(content, `${optimizedData?.appName || 'project'}-schema.sql`, 'text/plain');
   };
 
   const handleSaveProject = async () => {
     setIsSaving(true);
+    setError(null);
     try {
       const response = await fetch('/api/projects', {
         method: 'POST',
@@ -201,11 +183,16 @@ export function ExportPanel() {
         }),
       });
 
-      if (response.ok) {
-        setSaved(true);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save project');
       }
+
+      setSaved(true);
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save project';
       console.error('Error saving project:', error);
+      setError(message);
     } finally {
       setIsSaving(false);
     }

@@ -128,8 +128,12 @@ export function updateProject(id: string, updates: Partial<{
   }
 
   fields.push('updated_at = CURRENT_TIMESTAMP');
-  values.push(id);
 
   const stmt = db.prepare(`UPDATE projects SET ${fields.join(', ')} WHERE id = ?`);
-  stmt.run(...values);
+  stmt.run(...values, id);
+}
+
+export function deleteProject(id: string): void {
+  const stmt = db.prepare('DELETE FROM projects WHERE id = ?');
+  stmt.run(id);
 }
