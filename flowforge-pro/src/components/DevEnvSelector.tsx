@@ -1,12 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
+import { toast } from '@/components/ui/use-toast';
 import type { DevEnvironment } from '@/types';
-import { ArrowRight, ArrowLeft, Terminal, Zap, Code2, Monitor, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Terminal, Zap, Code2, Monitor, Sparkles, Copy, Check, ExternalLink } from 'lucide-react';
 
 const devEnvironments: {
   type: DevEnvironment;
@@ -16,6 +18,8 @@ const devEnvironments: {
   command: string;
   icon: typeof Terminal;
   color: string;
+  copyable: boolean;
+  link?: string;
 }[] = [
   {
     type: 'opencode',
@@ -25,6 +29,7 @@ const devEnvironments: {
     command: 'npm i -g opencode',
     icon: Terminal,
     color: 'cyan',
+    copyable: true,
   },
   {
     type: 'claude-terminal',
@@ -34,6 +39,7 @@ const devEnvironments: {
     command: 'npm i -g @anthropic-ai/claude-code',
     icon: Terminal,
     color: 'orange',
+    copyable: true,
   },
   {
     type: 'claude-vscode',
@@ -43,6 +49,8 @@ const devEnvironments: {
     command: 'Install VS Code extension',
     icon: Code2,
     color: 'blue',
+    copyable: false,
+    link: 'https://marketplace.visualstudio.com/items?itemName=anthropics.claude-code',
   },
   {
     type: 'claude-desktop',
@@ -52,6 +60,8 @@ const devEnvironments: {
     command: 'Download from anthropic.com',
     icon: Monitor,
     color: 'purple',
+    copyable: false,
+    link: 'https://anthropic.com/claude',
   },
   {
     type: 'gemini-antigraphity',
@@ -61,14 +71,34 @@ const devEnvironments: {
     command: 'Visit antigraphity.com',
     icon: Sparkles,
     color: 'green',
+    copyable: false,
+    link: 'https://antigraphity.com',
   },
 ];
 
 export function DevEnvSelector() {
   const { devEnvironment, setDevEnvironment, nextStep, prevStep } = useAppStore();
+  const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
 
   const handleSelect = (env: DevEnvironment) => {
     setDevEnvironment(env);
+  };
+
+  const handleCopyCommand = async (e: React.MouseEvent, command: string, title: string) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(command);
+    setCopiedCommand(command);
+    toast({
+      title: 'Copied!',
+      description: `${title} command copied to clipboard`,
+      variant: 'success',
+    });
+    setTimeout(() => setCopiedCommand(null), 2000);
+  };
+
+  const handleOpenLink = (e: React.MouseEvent, link: string) => {
+    e.stopPropagation();
+    window.open(link, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -83,7 +113,7 @@ export function DevEnvSelector() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {devEnvironments.map(({ type, title, emoji, description, command, icon: Icon, color }) => (
+        {devEnvironments.map(({ type, title, emoji, description, command, icon: Icon, color, copyable, link }) => (
           <Card
             key={type}
             className={cn(
@@ -97,16 +127,50 @@ export function DevEnvSelector() {
             <CardHeader className="pb-3">
               <div className="flex items-center gap-3">
                 <div className="text-2xl">{emoji}</div>
-                <div>
-                  <CardTitle className="text-base">{title}</CardTitle>
+                <div className="flex-1">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    {title}
+                    {devEnvironment === type && (
+                      <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                        Selected
+                      </Badge>
+                    )}
+                  </CardTitle>
                   <CardDescription className="text-xs">{description}</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <code className="text-xs bg-muted px-2 py-1 rounded block overflow-x-auto">
-                {command}
-              </code>
+              <div className="flex items-center gap-2">
+                <code className="text-xs bg-muted px-2 py-1.5 rounded flex-1 overflow-x-auto">
+                  {command}
+                </code>
+                {copyable ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={(e) => handleCopyCommand(e, command, title)}
+                    aria-label={`Copy ${title} command`}
+                  >
+                    {copiedCommand === command ? (
+                      <Check className="h-4 w-4 text-green-400" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                ) : link ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={(e) => handleOpenLink(e, link)}
+                    aria-label={`Open ${title} website`}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                ) : null}
+              </div>
             </CardContent>
           </Card>
         ))}

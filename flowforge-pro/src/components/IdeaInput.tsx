@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/store/useAppStore';
 import { ArrowRight, ArrowLeft, Sparkles, Lightbulb } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 const exampleIdeas = [
   'A habit tracker with streaks and reminders',
@@ -51,6 +52,11 @@ export function IdeaInput() {
       const message = error instanceof Error ? error.message : 'Failed to optimize idea';
       console.error('Error optimizing idea:', error);
       setError(message);
+      toast({
+        title: 'Optimization Failed',
+        description: message,
+        variant: 'destructive',
+      });
     } finally {
       setIsOptimizing(false);
       setLoading(false);

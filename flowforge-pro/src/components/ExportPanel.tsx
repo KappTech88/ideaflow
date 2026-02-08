@@ -8,6 +8,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { ArrowLeft, Download, FileText, Code, Database, Workflow, CheckCircle, Save } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { generateSQL } from '@/lib/schema-utils';
+import { toast } from '@/components/ui/use-toast';
 
 function generateMarkdown(state: ReturnType<typeof useAppStore.getState>): string {
   const { optimizedData, workflowData, schemaData, databaseType, devEnvironment, projectType, originalIdea } = state;
@@ -143,23 +144,43 @@ export function ExportPanel() {
   const handleDownloadMarkdown = () => {
     const content = generateMarkdown(state);
     downloadFile(content, `${optimizedData?.appName || 'project'}-devplan.md`, 'text/markdown');
+    toast({
+      title: 'Downloaded!',
+      description: 'Development plan saved as Markdown',
+      variant: 'success',
+    });
   };
 
   const handleDownloadN8N = () => {
     const content = JSON.stringify(generateN8NWorkflow(state), null, 2);
     downloadFile(content, `${optimizedData?.appName || 'project'}-n8n.json`, 'application/json');
+    toast({
+      title: 'Downloaded!',
+      description: 'N8N workflow exported successfully',
+      variant: 'success',
+    });
   };
 
   const handleDownloadComfyUI = () => {
     const content = JSON.stringify(generateComfyUIWorkflow(state), null, 2);
     downloadFile(content, `${optimizedData?.appName || 'project'}-comfyui.json`, 'application/json');
+    toast({
+      title: 'Downloaded!',
+      description: 'ComfyUI workflow exported successfully',
+      variant: 'success',
+    });
   };
 
   const handleDownloadSQL = () => {
-    const content = schemaData?.tables && databaseType 
-      ? generateSQL(schemaData.tables, databaseType) 
+    const content = schemaData?.tables && databaseType
+      ? generateSQL(schemaData.tables, databaseType)
       : '';
     downloadFile(content, `${optimizedData?.appName || 'project'}-schema.sql`, 'text/plain');
+    toast({
+      title: 'Downloaded!',
+      description: 'SQL schema exported successfully',
+      variant: 'success',
+    });
   };
 
   const handleSaveProject = async () => {
@@ -189,10 +210,20 @@ export function ExportPanel() {
       }
 
       setSaved(true);
+      toast({
+        title: 'Project Saved!',
+        description: 'Your project has been saved to the database',
+        variant: 'success',
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save project';
       console.error('Error saving project:', error);
       setError(message);
+      toast({
+        title: 'Save Failed',
+        description: message,
+        variant: 'destructive',
+      });
     } finally {
       setIsSaving(false);
     }
